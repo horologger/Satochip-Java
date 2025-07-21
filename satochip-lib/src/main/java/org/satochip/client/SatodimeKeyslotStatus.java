@@ -21,7 +21,7 @@ public class SatodimeKeyslotStatus {
   private byte[] tmpBuffer= null;
   /**
    * Constructor from TLV data
-   * @param tlvData the TLV data
+   * @param rapdu the APDU response containing the TLV data
    * @throws IllegalArgumentException if the TLV does not follow the expected format
    */
   public SatodimeKeyslotStatus(APDUResponse rapdu) {

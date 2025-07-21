@@ -32,7 +32,7 @@ public class ApplicationStatus {
 
     /**
     * Constructor from TLV data
-    * @param tlvData the TLV data
+    * @param rapdu the TLV data
     * @throws IllegalArgumentException if the TLV does not follow the expected format
     */
     public ApplicationStatus(APDUResponse rapdu) {

@@ -7,10 +7,11 @@ version='0.0.2'
 group = 'org.satochip'
 
 android {
-    compileSdkVersion 28
+    namespace 'org.satochip'
+    compileSdk 34 // Updated to latest stable SDK
     defaultConfig {
-        minSdkVersion 19
-        targetSdkVersion 28
+        minSdk 19
+        targetSdk 34
         versionCode 304
         versionName "3.0.4"
     }
@@ -20,7 +21,7 @@ android {
         targetCompatibility JavaVersion.VERSION_1_8
     }
 
-    lintOptions {
+    lint {
         abortOnError false
     }
 }
@@ -32,19 +33,18 @@ dependencies {
 // build a jar with source files
 task sourcesJar(type: Jar) {
     from android.sourceSets.main.java.srcDirs
-    classifier = 'sources'
+    archiveClassifier.set('sources')
 }
 
 task javadoc(type: Javadoc) {
     failOnError  false
-    source = android.sourceSets.main.java.sourceFiles
-    classpath += project.files(android.getBootClasspath().join(File.pathSeparator))
-    classpath += configurations.compile
+    source = android.sourceSets.main.java.srcDirs
+    classpath += project.files(android.bootClasspath.join(File.pathSeparator))
 }
 
 // build a jar with javadoc
 task javadocJar(type: Jar, dependsOn: javadoc) {
-    classifier = 'javadoc'
+    archiveClassifier.set('javadoc')
     from javadoc.destinationDir
 }
 
@@ -53,10 +53,32 @@ artifacts {
     archives javadocJar
 }
 
-android.libraryVariants.all { variant ->
-    def name = variant.buildType.name
-    def task = project.tasks.create "jar${name.capitalize()}", Jar
-    task.dependsOn variant.javaCompile
-    task.from variant.javaCompile.destinationDir
-    artifacts.add('archives', task);
+// The following block is deprecated in AGP 8.x and is commented out.
+// If you need to create jars per variant, use a new approach compatible with AGP 8.x.
+// android.libraryVariants.all { variant ->
+//     def name = variant.buildType.name
+//     def task = project.tasks.create "jar${name.capitalize()}", Jar
+//     task.dependsOn variant.javaCompile
+//     task.from variant.javaCompile.destinationDir
+//     artifacts.add('archives', task);
+// }
+
+afterEvaluate {
+    android.libraryVariants.all { variant ->
+        def variantName = variant.name.capitalize()
+        def javadocTask = tasks.create(name: "javadoc${variantName}", type: Javadoc) {
+            failOnError false
+            source = variant.sourceSets.collect { it.java.srcDirs }
+            // Add Android boot classpath
+            classpath = files(android.bootClasspath)
+            // Add the variant's compile classpath (Android and Java dependencies)
+            classpath += files(variant.javaCompileProvider.get().classpath)
+            // Add the compiled classes from satochip-lib
+            classpath += files("${project(':satochip-lib').buildDir}/classes/java/main")
+        }
+        tasks.named("javadocJar") {
+            dependsOn javadocTask
+            from javadocTask.destinationDir
+        }
+    }
 }

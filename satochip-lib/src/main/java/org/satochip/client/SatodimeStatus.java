@@ -86,7 +86,6 @@ public class SatodimeStatus {
     
   /**
    * Constructor from TLV data
-   * @param tlvData the TLV data
    * @throws IllegalArgumentException if the TLV does not follow the expected format
    */
  /*  public SatodimeStatus(APDUResponse rapdu) {

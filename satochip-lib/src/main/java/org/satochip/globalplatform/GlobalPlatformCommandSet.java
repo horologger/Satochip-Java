@@ -369,7 +369,7 @@ public class GlobalPlatformCommandSet {
   }
 
   /**
-   * Sends an INSTALL [for Install & Make Selectable] command. Use only if not installing applets part of the Keycard
+   * Sends an INSTALL [for Install &amp; Make Selectable] command. Use only if not installing applets part of the Keycard
    * package
    *
    * @param packageAID the package AID

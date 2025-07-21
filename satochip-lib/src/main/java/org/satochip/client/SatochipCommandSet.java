@@ -25,6 +25,7 @@ import java.security.cert.Certificate;
 import java.security.cert.PKIXParameters;
 import java.security.KeyStore;
 import java.security.PublicKey;
+import javax.smartcardio.CardException;
 
 import static org.satochip.client.Constants.*;
 
@@ -1153,7 +1154,7 @@ public class SatochipCommandSet {
      * - parameter exportRights: export rights for generated secret
      * - parameter label: label
      * <p>
-     * - Returns: Response adpu & SeedkeeperSecretHeader data
+     * - Returns: Response adpu &amp; SeedkeeperSecretHeader data
      */
     public SeedkeeperSecretHeader seedkeeperGenerateMasterseed(int seedSize, SeedkeeperExportRights exportRights, String label) throws Exception {
         byte[] labelBytes = label.getBytes(StandardCharsets.UTF_8);
