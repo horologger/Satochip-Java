@@ -49,6 +49,8 @@ public final class Constants {
     public final static byte INS_SET_2FA_KEY = (byte) 0x79;    
     public final static byte INS_RESET_2FA_KEY = (byte) 0x78;
     public final static byte INS_SIGN_TRANSACTION_HASH= (byte) 0x7A;
+    public final static byte INS_SIGN_SCHNORR_HASH = (byte) 0x7B;
+    public final static byte INS_TWEAK_TAPROOT_PRIVKEY = (byte) 0x7C;
     // secure channel
     public final static byte INS_INIT_SECURE_CHANNEL = (byte) 0x81;
     public final static byte INS_PROCESS_SECURE_CHANNEL = (byte) 0x82;

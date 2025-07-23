@@ -1624,6 +1624,79 @@ public class SatochipCommandSet {
 
     // TODO: add Schnorr signatures
     // TODO: add MuSig2 signatures
+    
+    /**
+     * This function signs a given hash with a std or the last extended key
+     * If 2FA is enabled, a HMAC must be provided as an additional security layer.      *
+     * ins: 0x7B
+     * p1: key number or 0xFF for the last derived Bip32 extended key
+     * p2: 0x00
+     * data: [hash(32b) | option: 2FA-flag(2b)|hmac(20b)]
+     * return: [sig]
+     */
+    public APDUResponse cardSignSchnorrHash(byte keynbr, byte[] txhash, byte[] chalresponse) {
+        try {
+            byte[] data;
+            if(txhash.length != 32) {
+                logger.warning("SATOCHIPLIB: Wrong txhash length (should be 32)");
+                return new APDUResponse(new byte[0], (byte) 0x00, (byte) 0x00);
+            }
+            if(chalresponse == null) {
+                data = new byte[32];
+                System.arraycopy(txhash, 0, data, 0, txhash.length);
+            } else if(chalresponse.length == 20) {
+                data = new byte[32 + 2 + 20];
+                int offset = 0;
+                System.arraycopy(txhash, 0, data, offset, txhash.length);
+                offset += 32;
+                data[offset++] = (byte) 0x80; // 2 middle bytes for 2FA flag
+                data[offset++] = (byte) 0x00;
+                System.arraycopy(chalresponse, 0, data, offset, chalresponse.length);
+            } else {
+                logger.warning("SATOCHIPLIB: Wrong challenge-response length (should be 20)");
+                return new APDUResponse(new byte[0], (byte) 0x00, (byte) 0x00);
+            }
+
+            APDUCommand plainApdu = new APDUCommand(0xB0, INS_SIGN_SCHNORR_HASH, keynbr, 0x00, data);
+            return this.cardTransmit(plainApdu);
+        } catch (Exception e) {
+            logger.warning("SATOCHIPLIB: Exception in cardSignSchnorrHash: " + e);
+            return new APDUResponse(new byte[0], (byte) 0x00, (byte) 0x00);
+        }
+    }
+
+    /**
+     * This function tweak the currently available private stored in the Satochip.
+     * Tweaking is based on the 'taproot_tweak_seckey(seckey0, h)' algorithm specification defined here:
+     * https://github.com/bitcoin/bips/blob/master/bip-0341.mediawiki#constructing-and-spending-taproot-outputs
+     * <p>
+     * ins: 0x7C
+     * p1: key number or 0xFF for the last derived Bip32 extended key
+     * p2: 0x00 for key tweak, 0x01 to bypass tweak
+     * data: [hash(32b) | option: 2FA-flag(2b)|hmac(20b)]
+     * return: [sig]
+     */
+    public APDUResponse cardTaprootTweakPrivkey(byte keynbr, byte bypass_tweak, byte[] tweak) {
+        try {
+            byte[] data;
+            if(tweak == null) {
+                tweak = new byte[32]; // by default use a 32-byte vector filled with '0x00'
+            }
+            if(tweak.length != 32) {
+                logger.warning("SATOCHIPLIB: Wrong tweak length (should be 32)");
+                return new APDUResponse(new byte[0], (byte) 0x00, (byte) 0x00);
+            }
+            data = new byte[33];
+            data[0] = (byte) 32;
+            System.arraycopy(tweak, 0, data, 1, tweak.length);
+
+            APDUCommand plainApdu = new APDUCommand(0xB0, INS_TWEAK_TAPROOT_PRIVKEY, keynbr, bypass_tweak, data);
+            return this.cardTransmit(plainApdu);
+        } catch (Exception e) {
+            logger.warning("SATOCHIPLIB: Exception in cardTaprootTweakPrivkey: " + e);
+            return new APDUResponse(new byte[0], (byte) 0x00, (byte) 0x00);
+        }
+    }
 
     /****************************************
      *               2FA commands            *
