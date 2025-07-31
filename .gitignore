@@ -7,3 +7,5 @@
 /captures
 .externalNativeBuild
 .vscode/
+satochip-desktop/bin/
+satochip-lib/bin/

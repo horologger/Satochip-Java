@@ -130,4 +130,8 @@ public class ApplicationStatus {
     public int getProtocolVersion() {
         return protocol_version;
     }
+    
+    public boolean needs2FA() {
+        return needs_2FA;
+    }
 }

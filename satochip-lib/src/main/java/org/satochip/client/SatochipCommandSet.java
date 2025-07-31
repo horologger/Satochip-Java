@@ -3299,4 +3299,144 @@ public class SatochipCommandSet {
         return out;
     }
 
+    /*
+     * Java implementation of satochip_sign_nostr_event function
+     * Based on the Python implementation in satochip_sign_nostr_event.txt
+     * 
+     * This function signs a Nostr event with the Satochip using schnorr signature.
+     * The signed event can also be broadcasted on request.
+     * If keyslot is provided, use the private key loaded at given keyslot.
+     * Else if path is provided, use key derived from the BIP32 seed at given path.
+     * If none is provided, use default path m/44'/0'/0'/0/0 and BIP32 derivation.
+     */
+    /*
+    public String satochipSignNostrEvent(int keyslot, String path, String message, int kind, boolean broadcast, String relay) throws Exception {
+        // TODO: check version support (must be >=0.14)
+        
+        // derive & export pubkey from card
+        String compressedPubkey = null;
+        try {
+            // get PIN from environment variable or interactively
+            String pin = System.getenv("PYSATOCHIP_PIN");
+            if (pin == null) {
+                // TODO: Implement interactive PIN input
+                throw new RuntimeException("PIN not found in environment variable 'PYSATOCHIP_PIN'. Interactive PIN input not implemented yet.");
+            }
+            System.out.println("INFO: PIN value recovered from environment variable 'PYSATOCHIP_PIN'");
+            
+            cardVerifyPIN(pin.getBytes());
+            
+            // check if 2FA is required
+            ApplicationStatus appStatus = getApplicationStatus();
+            if (appStatus.needs2FA()) {
+                throw new RuntimeException("Required 2FA not supported currently!");
+            }
+            
+            // derive key
+            if (keyslot == 0xFF) {
+                // 0xFF is for extended key, used if no keyslot is provided
+                byte[][] keyData = cardBip32GetExtendedKey(path, (byte) 0x02, null); // 0x02 for BIP32 privkey
+                byte[] pubkey = keyData[0]; // First element is the public key
+                compressedPubkey = Hex.toHexString(pubkey);
+                System.out.println("pubkey for BIP32 derivation: " + compressedPubkey);
+            } else {
+                // For regular keyslots, we need to derive the key first
+                // This is a simplified approach - in practice, you might need a different method
+                String defaultPath = "m/44'/0'/0'/0/0";
+                byte[][] keyData = cardBip32GetExtendedKey(defaultPath, (byte) 0x02, null);
+                byte[] pubkey = keyData[0];
+                compressedPubkey = Hex.toHexString(pubkey);
+                System.out.println("pubkey from default path: " + compressedPubkey);
+            }
+            
+            System.out.println("Recovered pubkey: " + compressedPubkey);
+            
+        } catch (Exception ex) {
+            System.out.println("Exception during public key export: " + ex.getMessage());
+            throw ex;
+        }
+        
+        // Create Nostr event
+        // TODO: Implement Nostr Event class or use a simple structure
+        String eventId = createNostrEventId(kind, message, compressedPubkey.substring(2)); // remove compression byte
+        System.out.println("Unsigned event id: " + eventId);
+        
+        // Sign the event
+        String signature = "";
+        try {
+            System.out.println("Signing event");
+            byte[] hashBytes = Hex.decode(eventId);
+            
+            // tweak key (or bypass)
+            // TODO: currently bypass tweak by default
+            byte[] tweak = null;
+            APDUResponse response = cardTaprootTweakPrivkey((byte) keyslot, (byte) 1, tweak); // bypass_flag=True
+            System.out.println("pubkey after tweak: " + Hex.toHexString(response.getData()));
+            
+            // sign hash
+            byte[] hmac = null; // 2FA not supported yet
+            APDUResponse response2 = cardSignSchnorrHash((byte) keyslot, hashBytes, hmac);
+            if (response2.getData().length == 0) {
+                System.out.println("Wrong signature: the 2FA device may have rejected the action.");
+            } else {
+                signature = Hex.toHexString(response2.getData());
+            }
+            
+        } catch (Exception e) {
+            System.out.println("Error during signing: " + e.getMessage());
+            throw e;
+        }
+        
+        // Display, verify & broadcast the event
+        System.out.println("Signed event Hash: " + eventId);
+        
+        // Validate the Signature
+        boolean isVerified = verifyNostrSignature(eventId, signature, compressedPubkey.substring(2));
+        System.out.println("Signed event is_verified: " + isVerified);
+        
+        if (broadcast) {
+            System.out.println("\nBroadcasting event to relay...");
+            // TODO: Implement broadcast functionality
+            broadcastNostrEvent(createSignedEventJson(kind, message, compressedPubkey.substring(2), signature), relay);
+        }
+        
+        return createSignedEventJson(kind, message, compressedPubkey.substring(2), signature);
+    }
+    
+    // Helper methods for Nostr event handling
+    private String createNostrEventId(int kind, String content, String publicKey) {
+        // Create the event structure for hashing according to Nostr specification
+        // The event ID is the SHA256 hash of the serialized event data
+        long createdAt = System.currentTimeMillis() / 1000;
+        String eventJson = String.format("[0,\"%s\",%d,%d,\"%s\"]", 
+            publicKey, createdAt, kind, content);
+        
+        // Hash the JSON string
+        byte[] hash = Sha256Hash.hash(eventJson.getBytes(StandardCharsets.UTF_8));
+        return Hex.toHexString(hash);
+    }
+    
+    private boolean verifyNostrSignature(String eventId, String signature, String publicKey) {
+        // TODO: Implement Schnorr signature verification
+        // This would require a Schnorr signature verification library
+        return true; // Placeholder
+    }
+    
+    private String createSignedEventJson(int kind, String content, String publicKey, String signature) {
+        long createdAt = System.currentTimeMillis() / 1000;
+        return String.format("{\"id\":\"%s\",\"pubkey\":\"%s\",\"created_at\":%d,\"kind\":%d,\"tags\":[],\"content\":\"%s\",\"sig\":\"%s\"}",
+            createNostrEventId(kind, content, publicKey),
+            publicKey,
+            createdAt,
+            kind,
+            content,
+            signature);
+    }
+    
+    private void broadcastNostrEvent(String eventJson, String relay) {
+        // TODO: Implement WebSocket connection to relay and event broadcasting
+        System.out.println("Would broadcast to " + relay + ": " + eventJson);
+    }
+    */
+
 }

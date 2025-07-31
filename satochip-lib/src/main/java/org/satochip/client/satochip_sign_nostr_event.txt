@@ -1,0 +1,107 @@
+// HINTS:
+// This is python code definition of the satochip_sign_nostr_event function.
+// Function naminging conventions is as follows.
+// card_taproot_tweak_privkey in python is implemented by cardTaprootTweakPrivkey in java
+// card_sign_schnorr_hash in python is implemented by cardSignSchnorrHash in java
+// similar functions can be found in the java code files including SatochipCommandSet.java
+
+
+@main.command()
+@click.option("--keyslot", default="255", help="keyslot of the private key (for single-key wallet")
+@click.option("--path", default="m/44'/0'/0'/0/0", help="path: the full BIP32 path of the address")
+@click.option("--message", prompt="Enter your message", help="Message for the Nostr event")
+@click.option("--kind", default="1", help="Kind for the Nostr event")
+@click.option("--broadcast", is_flag=True, default=False, help="Broadcast the event to the relay")
+@click.option("--relay", default="wss://relay.damus.io", help="Nostr relay URL to use")
+def satochip_sign_nostr_event(keyslot, path: str, message: str, kind: str, broadcast: bool, relay: str):
+    """Sign a Nostr event with the Satochip using schnorr signature.
+    The signed event can also be brodacasted on request.
+    If keyslot is provided, use the private key loaded at given keyslot.
+    Else if path is provided, use key derived from the BIP32 seed at given path.
+    If none is provided, use default path m/44'/0'/0'/0/0 and BIP32 derivation.
+    """
+
+    # todo: check version support (must be >=0.14)
+
+    # derive & export pubkey from card
+    compressed_pubkey = None
+    try:
+        # get PIN from environment variable or interactively
+        if 'PYSATOCHIP_PIN' in environ:
+            pin = environ.get('PYSATOCHIP_PIN')
+            print("INFO: PIN value recovered from environment variable 'PYSATOCHIP_PIN'")
+        else:
+            pin = getpass("Enter your PIN:")
+        cc.card_verify_PIN(pin)
+
+        # check if 2FA is required
+        if cc.needs_2FA == None:
+            (response, sw1, sw2, d) = cc.card_get_status()
+        if cc.needs_2FA:
+            raise ValueError("Required 2FA not supported currently!")
+
+        # derive key
+        keyslot = int(keyslot)
+        if keyslot == 0xFF:
+            # 0xFF is for extended key, used if no keyslot is provided
+            (depth, bytepath) = cc.parser.bip32path2bytes(path)
+            (pubkey, chaincode) = cc.card_bip32_get_extendedkey(bytepath)
+            print(f"pubkey for BIP32 derivation: {pubkey.get_public_key_bytes(compressed=False).hex()}")
+        else:
+            pubkey = cc.satochip_get_pubkey_from_keyslot(keyslot)
+
+        # export pubkey
+        #pubkey = cc.satochip_get_pubkey_from_keyslot(keyslot)
+        compressed_pubkey = pubkey.get_public_key_bytes(compressed=True).hex()
+        print(f"Recovered pubkey: {compressed_pubkey}")
+
+    except Exception as ex:
+        print(f"Exception during public key export: {ex}")
+
+    # Create Nostr event
+    kind = int(kind)
+    event = Event(
+        kind=EventKind(kind),
+        content=message,
+        public_key=compressed_pubkey[2:] # remove compression byte
+    )
+    event_id = event.id
+    print(f"Unsigned event: {event.to_message()}")
+    print(f"Unsigned event id: {event_id}")
+
+    # Sign the event
+    signature = ""
+    try:
+        click.echo("Signing event")
+        hash_bytes = bytes.fromhex(event_id)
+        hash_list = list(hash_bytes)
+
+        # tweak key (or bypass)
+        # todo: currently bypass tweak by default
+        tweak = None
+        (response, sw1, sw2) = cc.card_taproot_tweak_privkey(keyslot, tweak, bypass_flag=True)
+        print(f"pubkey after tweak: {bytes(response).hex()}")
+
+        # sign hash
+        hmac = None # 2FA not supported yet
+        (response2, sw1, sw2) = cc.card_sign_schnorr_hash(keyslot, hash_list, hmac)
+        if response2 == []:
+            print("Wrong signature: the 2FA device may have rejected the action.")
+        else:
+            signature = str(bytes(response2).hex())
+
+    except Exception as e:
+        print(e)
+
+    # Display, verify & broadcast the event
+    event.signature = signature
+    print(f"Signed event: {event.to_message()}")
+    print(f"Signed event Hash: {event.id}")
+
+    # Validate the Signature
+    is_verified = event.verify()
+    print(f"Signed event is_verified: {is_verified}")
+
+    if broadcast:
+        click.echo("\nBroadcasting event to relay...")
+        broadcast_event(event.to_message(), relay)
